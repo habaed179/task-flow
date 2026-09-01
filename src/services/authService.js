@@ -9,7 +9,7 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '../firebase/config';
-import { deleteUserProfile, getUserProfile } from './userService';
+import { deleteUserProfile, createUserProfile } from './userService';
 
 const MOCK_USER_STORAGE_KEY = 'taskflow_auth_user';
 
@@ -17,11 +17,7 @@ export const loginWithEmail = async (email, password) => {
   if (isFirebaseConfigured) {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    const profile = await getUserProfile(user.uid);
-    if (profile?.deleted || profile?.status === 'deleted') {
-      await signOut(auth);
-      throw new Error('This account has been deleted and can no longer log in.');
-    }
+    await createUserProfile(user);
     return user;
   }
   const mockUser = {
@@ -38,11 +34,29 @@ export const loginWithEmail = async (email, password) => {
 
 export const registerWithEmail = async (email, password, displayName) => {
   if (isFirebaseConfigured) {
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-    if (displayName) {
-      await updateProfile(userCredential.user, { displayName });
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      if (displayName) {
+        await updateProfile(userCredential.user, { displayName });
+      }
+      await createUserProfile(userCredential.user, { displayName });
+      return userCredential.user;
+    } catch (err) {
+      if (err.code === 'auth/email-already-in-use') {
+        // Attempt sign-in to re-activate account if password matches
+        try {
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          if (displayName) {
+            await updateProfile(userCredential.user, { displayName });
+          }
+          await createUserProfile(userCredential.user, { displayName });
+          return userCredential.user;
+        } catch (loginErr) {
+          throw err; // Throw original email-in-use error if password fails
+        }
+      }
+      throw err;
     }
-    return userCredential.user;
   }
   const mockUser = {
     uid: `user-${Date.now()}`,
@@ -60,11 +74,7 @@ export const loginWithGoogle = async () => {
   if (isFirebaseConfigured) {
     const userCredential = await signInWithPopup(auth, googleProvider);
     const user = userCredential.user;
-    const profile = await getUserProfile(user.uid);
-    if (profile?.deleted || profile?.status === 'deleted') {
-      await signOut(auth);
-      throw new Error('This account has been deleted and can no longer log in.');
-    }
+    await createUserProfile(user);
     return user;
   }
   const mockUser = {

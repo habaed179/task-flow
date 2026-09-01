@@ -19,12 +19,6 @@ export async function createUserProfile(userOrUid, data = {}) {
   const uid = typeof userOrUid === 'string' ? userOrUid : userOrUid?.uid;
   if (!uid) return null;
 
-  // Check if profile was marked as deleted
-  const existing = await getUserProfile(uid);
-  if (existing?.deleted || existing?.status === 'deleted') {
-    return { id: uid, deleted: true, status: 'deleted' };
-  }
-
   const email = typeof userOrUid === 'object' ? userOrUid.email : data.email;
   const displayName = data.displayName || (typeof userOrUid === 'object' ? userOrUid.displayName : null) || email?.split('@')[0] || 'TaskFlow User';
 
@@ -36,7 +30,6 @@ export async function createUserProfile(userOrUid, data = {}) {
     platformRole: data.platformRole || 'platformUser',
     role: data.role || 'member',
     status: data.status || 'active',
-    deleted: false,
   };
 
   try {
@@ -68,9 +61,8 @@ export async function deleteUserProfile(uid) {
   if (!uid) return;
   try {
     const userDocRef = doc(db, 'users', uid);
-    // Mark as deleted in Firestore to prevent re-login recreations
-    await setDoc(userDocRef, { deleted: true, status: 'deleted', updatedAt: serverTimestamp() }, { merge: true });
+    await deleteDoc(userDocRef);
   } catch (error) {
-    console.warn('Could not mark user profile deleted in Firestore:', error?.message || error);
+    console.warn('Could not delete user profile from Firestore:', error?.message || error);
   }
 }
