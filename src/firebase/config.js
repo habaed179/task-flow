@@ -4,22 +4,22 @@ import { getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 
 const rawKey = import.meta.env.VITE_FIREBASE_API_KEY;
-const apiKey = (rawKey && rawKey.trim().length > 10) ? rawKey.trim() : 'AIzaSyAfOfkXnj1F3El-M1lfTan4CMU0Eszbkzo';
+const apiKey = (rawKey && rawKey.trim().length > 10) ? rawKey.trim() : 'AIzaSyDeezsnM9o_Ibf3HtEil2pN1ePa5oBn86w';
 
 const rawDomain = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
-const authDomain = (rawDomain && rawDomain.trim()) ? rawDomain.trim() : 'task-flow-32223.firebaseapp.com';
+const authDomain = (rawDomain && rawDomain.trim()) ? rawDomain.trim() : 'task-flow-9e513.firebaseapp.com';
 
 const rawProject = import.meta.env.VITE_FIREBASE_PROJECT_ID;
-const projectId = (rawProject && rawProject.trim()) ? rawProject.trim() : 'task-flow-32223';
+const projectId = (rawProject && rawProject.trim()) ? rawProject.trim() : 'task-flow-9e513';
 
 const rawBucket = import.meta.env.VITE_FIREBASE_STORAGE_BUCKET;
-const storageBucket = (rawBucket && rawBucket.trim()) ? rawBucket.trim() : 'task-flow-32223.firebasestorage.app';
+const storageBucket = (rawBucket && rawBucket.trim()) ? rawBucket.trim() : 'task-flow-9e513.firebasestorage.app';
 
 const rawSender = import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID;
-const messagingSenderId = (rawSender && rawSender.trim()) ? rawSender.trim() : '1013370272594';
+const messagingSenderId = (rawSender && rawSender.trim()) ? rawSender.trim() : '17267983439';
 
 const rawAppId = import.meta.env.VITE_FIREBASE_APP_ID;
-const appId = (rawAppId && rawAppId.trim()) ? rawAppId.trim() : '1:1013370272594:web:06edb447540a54c8d5188b';
+const appId = (rawAppId && rawAppId.trim()) ? rawAppId.trim() : '1:17267983439:web:cdb8700f66a3145c24d63a';
 
 const firebaseConfig = {
   apiKey,
