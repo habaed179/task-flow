@@ -77,51 +77,56 @@ export default function InvitationsList() {
       </div>
 
       <div className="space-y-3">
-        {invitations.map((inv) => (
-          <div
-            key={inv.id}
-            className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs"
-          >
-            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
-                <Clock className="w-4 h-4" />
+        {invitations.map((inv) => {
+          const isRecipient = currentUser?.email && inv.email && inv.email.toLowerCase().trim() === currentUser.email.toLowerCase().trim();
+          return (
+            <div
+              key={inv.id}
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 text-xs"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
+                  <Clock className="w-4 h-4" />
+                </div>
+                <div>
+                  <p className="font-bold text-slate-900 dark:text-white">{inv.email}</p>
+                  <p className="text-[11px] text-slate-400">Invited as {inv.role || 'member'} by {inv.invitedBy || 'Admin'}</p>
+                </div>
               </div>
-              <div>
-                <p className="font-bold text-slate-900 dark:text-white">{inv.email}</p>
-                <p className="text-[11px] text-slate-400">Invited as {inv.role || 'member'} by {inv.invitedBy || 'Admin'}</p>
+
+              <div className="flex items-center gap-2">
+                {isRecipient && (
+                  <button
+                    type="button"
+                    onClick={() => handleAccept(inv)}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-xs"
+                  >
+                    <CheckCircle className="w-3.5 h-3.5" />
+                    <span>Accept & Join</span>
+                  </button>
+                )}
+
+                <button
+                  type="button"
+                  onClick={() => handleResend(inv.id, inv.email)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold transition-colors"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Resend</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleRevoke(inv.id, inv.email)}
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold transition-colors"
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>Revoke</span>
+                </button>
               </div>
             </div>
-
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => handleAccept(inv)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-xs"
-              >
-                <CheckCircle className="w-3.5 h-3.5" />
-                <span>Accept</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleResend(inv.id, inv.email)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold transition-colors"
-              >
-                <RefreshCw className="w-3.5 h-3.5" />
-                <span>Resend</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleRevoke(inv.id, inv.email)}
-                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-600 dark:text-rose-400 font-semibold transition-colors"
-              >
-                <XCircle className="w-3.5 h-3.5" />
-                <span>Revoke</span>
-              </button>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
