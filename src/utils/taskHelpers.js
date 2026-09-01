@@ -34,28 +34,33 @@ export const getDueDateStatus = (dueDateString, isCompleted) => {
   return null;
 };
 
-export const filterAndSortTasks = (tasks, { searchQuery = '', status = 'all', category = 'all', priority = 'all', sortBy = 'newest' }) => {
+export const filterAndSortTasks = (tasks = [], { searchQuery = '', status = 'all', category = 'all', priority = 'all', sortBy = 'newest' }) => {
+  if (!Array.isArray(tasks)) return [];
+
   let result = [...tasks];
 
   // Search filter
-  if (searchQuery.trim()) {
+  if (typeof searchQuery === 'string' && searchQuery.trim()) {
     const q = searchQuery.toLowerCase().trim();
     result = result.filter((task) => {
-      const matchTitle = task.title?.toLowerCase().includes(q);
-      const matchDesc = task.description?.toLowerCase().includes(q);
-      const matchCat = task.category?.toLowerCase().includes(q);
-      const matchTags = task.tags?.some((t) => t.toLowerCase().includes(q));
+      if (!task || typeof task !== 'object') return false;
+      const matchTitle = typeof task.title === 'string' ? task.title.toLowerCase().includes(q) : false;
+      const matchDesc = typeof task.description === 'string' ? task.description.toLowerCase().includes(q) : false;
+      const matchCat = typeof task.category === 'string' ? task.category.toLowerCase().includes(q) : false;
+      const matchTags = Array.isArray(task.tags)
+        ? task.tags.some((t) => typeof t === 'string' && t.toLowerCase().includes(q))
+        : false;
       return matchTitle || matchDesc || matchCat || matchTags;
     });
   }
 
   // Status filter
   if (status === 'active') {
-    result = result.filter((task) => !task.completed);
+    result = result.filter((task) => !task.completed && task.status !== 'Done');
   } else if (status === 'completed') {
-    result = result.filter((task) => task.completed);
+    result = result.filter((task) => task.completed || task.status === 'Done');
   } else if (status === 'high-priority') {
-    result = result.filter((task) => task.priority === 'High');
+    result = result.filter((task) => task.priority === 'High' || task.priority === 'Urgent');
   }
 
   // Category filter
@@ -70,6 +75,7 @@ export const filterAndSortTasks = (tasks, { searchQuery = '', status = 'all', ca
 
   // Sorting
   result.sort((a, b) => {
+    if (!a || !b) return 0;
     switch (sortBy) {
       case 'newest':
         return new Date(b.createdAt || 0) - new Date(a.createdAt || 0);
@@ -80,11 +86,11 @@ export const filterAndSortTasks = (tasks, { searchQuery = '', status = 'all', ca
         if (!b.dueDate) return -1;
         return new Date(a.dueDate) - new Date(b.dueDate);
       case 'priority': {
-        const pMap = { High: 3, Medium: 2, Low: 1 };
+        const pMap = { Urgent: 4, High: 3, Medium: 2, Low: 1 };
         return (pMap[b.priority] || 0) - (pMap[a.priority] || 0);
       }
       case 'alphabetical':
-        return a.title.localeCompare(b.title);
+        return String(a.title || '').localeCompare(String(b.title || ''));
       default:
         return 0;
     }

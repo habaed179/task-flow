@@ -14,21 +14,25 @@ export default function SearchModal({ isOpen, onClose }) {
 
   if (!isOpen) return null;
 
-  const q = query.toLowerCase().trim();
+  const q = typeof query === 'string' ? query.toLowerCase().trim() : '';
+
+  const safeTasks = Array.isArray(tasks) ? tasks : [];
+  const safeProjects = Array.isArray(projects) ? projects : [];
+  const safeMembers = Array.isArray(currentWorkspace?.members) ? currentWorkspace.members : [];
 
   const matchedTasks = q
-    ? tasks.filter((t) => t.title.toLowerCase().includes(q) || t.description?.toLowerCase().includes(q))
+    ? safeTasks.filter((t) => (t.title || '').toLowerCase().includes(q) || (t.description || '').toLowerCase().includes(q))
     : [];
 
   const matchedProjects = q
-    ? projects.filter((p) => p.name.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q))
+    ? safeProjects.filter((p) => (p.name || '').toLowerCase().includes(q) || (p.description || '').toLowerCase().includes(q))
     : [];
 
   const matchedMembers = q
-    ? currentWorkspace?.members?.filter((m) => m.name.toLowerCase().includes(q) || m.email?.toLowerCase().includes(q))
+    ? safeMembers.filter((m) => (m.name || '').toLowerCase().includes(q) || (m.email || '').toLowerCase().includes(q))
     : [];
 
-  const hasResults = matchedTasks.length > 0 || matchedProjects.length > 0 || (matchedMembers && matchedMembers.length > 0);
+  const hasResults = matchedTasks.length > 0 || matchedProjects.length > 0 || matchedMembers.length > 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center p-4 pt-20 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
@@ -123,7 +127,7 @@ export default function SearchModal({ isOpen, onClose }) {
           )}
 
           {/* Members Group */}
-          {matchedMembers && matchedMembers.length > 0 && (
+          {matchedMembers.length > 0 && (
             <div>
               <p className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 flex items-center gap-1.5">
                 <Users className="w-3.5 h-3.5" />
@@ -141,7 +145,7 @@ export default function SearchModal({ isOpen, onClose }) {
                   >
                     <div className="flex items-center gap-2.5">
                       <div className="w-7 h-7 rounded-full bg-brand-500/20 text-brand-600 dark:text-brand-400 flex items-center justify-center font-bold text-xs">
-                        {m.name.charAt(0)}
+                        {(m.name || 'M').charAt(0)}
                       </div>
                       <div>
                         <h5 className="text-xs font-semibold text-slate-900 dark:text-white">{m.name}</h5>
