@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Clock, RefreshCw, XCircle, CheckCircle } from 'lucide-react';
+import { Mail, Clock, RefreshCw, XCircle, CheckCircle, Copy } from 'lucide-react';
 import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../../context/ToastContext';
@@ -65,8 +65,14 @@ export default function InvitationsList() {
     const body = encodeURIComponent(
       `Hi,\n\nReminder: You have been invited to join "${currentWorkspace?.name || 'TaskFlow Workspace'}" on TaskFlow SaaS.\n\nPlease log in at https://task-flow-two-fawn.vercel.app to accept.\n\nBest regards,\n${currentUser?.email}`
     );
-    window.open(`mailto:${cleanEmail}?subject=${subject}&body=${body}`, '_blank');
-    toast.success(`Opened email client to resend invitation to ${cleanEmail}`);
+    window.location.href = `mailto:${cleanEmail}?subject=${subject}&body=${body}`;
+    toast.success(`Opened mail client to resend invitation to ${cleanEmail}`);
+  };
+
+  const handleCopyLink = (invId) => {
+    const link = `${window.location.origin}/register?invite=${invId}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Invitation link copied to clipboard!');
   };
 
   const handleRevoke = async (id, email) => {
@@ -123,11 +129,21 @@ export default function InvitationsList() {
 
                 <button
                   type="button"
+                  onClick={() => handleCopyLink(inv.id)}
+                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold transition-colors"
+                  title="Copy Invite Link"
+                >
+                  <Copy className="w-3.5 h-3.5" />
+                  <span>Copy Link</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => handleResend(inv.id, inv.email)}
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Resend Email</span>
+                  <span>Resend</span>
                 </button>
 
                 <button
