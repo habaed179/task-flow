@@ -4,8 +4,26 @@ import { useAuth } from '../../hooks/useAuth';
 import { useToast } from '../../context/ToastContext';
 import { Zap, Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 
+function formatAuthError(err) {
+  if (!err) return 'An error occurred. Please try again.';
+  const msg = err.code || err.message || String(err);
+  if (msg.includes('email-already-in-use')) {
+    return 'This email address is already registered. Please log in or use a different email.';
+  }
+  if (msg.includes('weak-password')) {
+    return 'Password is too weak. Please use at least 6 characters.';
+  }
+  if (msg.includes('invalid-email')) {
+    return 'Please enter a valid email address.';
+  }
+  if (msg.includes('wrong-password') || msg.includes('invalid-credential') || msg.includes('user-not-found')) {
+    return 'Invalid email or password.';
+  }
+  return msg.replace(/^Firebase:\s*/i, '').replace(/auth\//i, '');
+}
+
 export default function RegisterPage() {
-  const { register, loginGoogle } = useAuth();
+  const { register } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -33,7 +51,7 @@ export default function RegisterPage() {
       toast.success('Account created successfully!');
       navigate('/dashboard');
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -56,7 +74,7 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-2">
+          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs font-medium flex items-center gap-2.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>

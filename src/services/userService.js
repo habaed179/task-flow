@@ -10,30 +10,33 @@ export async function getUserProfile(uid) {
       return { id: snap.id, ...snap.data() };
     }
   } catch (error) {
-    console.error('Error fetching user profile from Firestore:', error);
+    console.warn('Could not fetch user profile from Firestore:', error?.message || error);
   }
   return null;
 }
 
-export async function createUserProfile(uid, data) {
+export async function createUserProfile(userOrUid, data = {}) {
+  const uid = typeof userOrUid === 'string' ? userOrUid : userOrUid?.uid;
   if (!uid) return null;
-  const userDocRef = doc(db, 'users', uid);
+
+  const email = typeof userOrUid === 'object' ? userOrUid.email : data.email;
+  const displayName = data.displayName || (typeof userOrUid === 'object' ? userOrUid.displayName : null) || email?.split('@')[0] || 'TaskFlow User';
+
   const profile = {
     uid,
-    displayName: data.displayName || 'TaskFlow User',
-    email: data.email || '',
-    photoURL: data.photoURL || '',
+    displayName,
+    email: email || '',
+    photoURL: (typeof userOrUid === 'object' ? userOrUid.photoURL : null) || data.photoURL || '',
     platformRole: data.platformRole || 'platformUser',
     role: data.role || 'member',
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
   };
 
   try {
-    await setDoc(userDocRef, profile, { merge: true });
+    const userDocRef = doc(db, 'users', uid);
+    await setDoc(userDocRef, { ...profile, updatedAt: serverTimestamp() }, { merge: true });
     return { id: uid, ...profile };
   } catch (error) {
-    console.error('Error creating user profile in Firestore:', error);
+    console.warn('Could not create/update user profile in Firestore:', error?.message || error);
     return { id: uid, ...profile };
   }
 }
@@ -49,6 +52,6 @@ export async function updateUserProfile(uid, data) {
       updatedAt: serverTimestamp(),
     });
   } catch (error) {
-    console.error('Error updating user profile in Firestore:', error);
+    console.warn('Could not update user profile in Firestore:', error?.message || error);
   }
 }
