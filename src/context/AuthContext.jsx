@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase/config';
-import { loginWithEmail, registerWithEmail, loginWithGoogle, logoutUser, resetPassword } from '../services/authService';
+import { loginWithEmail, registerWithEmail, loginWithGoogle, logoutUser, deleteUserAccount, resetPassword } from '../services/authService';
 import { getUserProfile, createOrUpdateUserDoc } from '../services/userService';
 
 const AuthContext = createContext(null);
@@ -100,6 +100,14 @@ export function AuthProvider({ children }) {
     localStorage.removeItem('taskflow_auth_user');
   };
 
+  const deleteAccount = async () => {
+    const uid = currentUser?.uid;
+    await deleteUserAccount(uid);
+    setCurrentUser(null);
+    setUserProfile(null);
+    localStorage.removeItem('taskflow_auth_user');
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -110,6 +118,7 @@ export function AuthProvider({ children }) {
         register,
         loginGoogle,
         logout,
+        deleteAccount,
         resetPassword,
         isAdmin: userProfile?.role === 'admin',
       }}

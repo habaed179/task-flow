@@ -2,23 +2,43 @@ import React, { useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useWorkspace } from '../hooks/useWorkspace';
 import { useTasks } from '../hooks/useTasks';
-import { User, Building2, Bell, Moon, Shield, Save, Download } from 'lucide-react';
+import { User, Building2, Moon, ShieldAlert, Save, Download, Trash2 } from 'lucide-react';
 import ExportDataModal from '../components/common/ExportDataModal';
 import { useToast } from '../context/ToastContext';
+import { useNavigate } from 'react-router-dom';
 
 export default function Settings() {
   const { toast } = useToast();
-  const { userProfile, updateUserProfile } = useAuth();
+  const { userProfile, updateUserProfile, deleteAccount } = useAuth();
   const { currentWorkspace } = useWorkspace();
   const { isDarkMode, toggleTheme } = useTasks();
+  const navigate = useNavigate();
 
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
-    await updateUserProfile({ displayName });
+    if (updateUserProfile) {
+      await updateUserProfile({ displayName });
+    }
     toast.success('Profile settings updated');
+  };
+
+  const handleDeleteAccount = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteAccount();
+      toast.info('Your account has been deleted.');
+      navigate('/register');
+    } catch (err) {
+      toast.error('Failed to delete account.');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirm(false);
+    }
   };
 
   return (
@@ -28,7 +48,7 @@ export default function Settings() {
           Account & Workspace Settings
         </h2>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Manage profile details, notification preferences, dark mode, and workspace data export.
+          Manage profile details, notification preferences, dark mode, workspace export, and account deletion.
         </p>
       </div>
 
@@ -72,9 +92,9 @@ export default function Settings() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <p className="text-sm font-bold text-slate-900 dark:text-white">
-              {currentWorkspace?.name || 'TaskFlow Demo Workspace'}
+              {currentWorkspace?.name || 'TaskFlow Workspace'}
             </p>
-            <p className="text-xs text-slate-400">Plan: {currentWorkspace?.plan || 'Pro'}</p>
+            <p className="text-xs text-slate-400">Plan: {currentWorkspace?.plan || 'Free'}</p>
           </div>
 
           <button
@@ -109,6 +129,64 @@ export default function Settings() {
           </button>
         </div>
       </div>
+
+      {/* Danger Zone: Account Deletion */}
+      <div className="p-6 rounded-3xl bg-rose-500/5 dark:bg-rose-950/20 border border-rose-200 dark:border-rose-900/40 space-y-4">
+        <h3 className="text-base font-bold text-rose-600 dark:text-rose-400 flex items-center gap-2 pb-3 border-b border-rose-100 dark:border-rose-900/40">
+          <ShieldAlert className="w-5 h-5 text-rose-500" />
+          Danger Zone
+        </h3>
+
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold text-slate-900 dark:text-white">Delete Account</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Permanently remove your account and user profile document from Firestore.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowDeleteConfirm(true)}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20"
+          >
+            <Trash2 className="w-4 h-4" />
+            <span>Delete My Account</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 p-6 space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2 text-rose-600">
+              <Trash2 className="w-5 h-5" />
+              Delete Account Confirmation
+            </h3>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Are you sure you want to permanently delete your account? Your user profile and authentication credentials will be removed from Firebase.
+            </p>
+            <div className="flex items-center justify-end gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-4 py-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleDeleteAccount}
+                disabled={isDeleting}
+                className="px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold shadow-md shadow-rose-600/20"
+              >
+                {isDeleting ? 'Deleting...' : 'Yes, Delete Account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <ExportDataModal
         isOpen={isExportModalOpen}

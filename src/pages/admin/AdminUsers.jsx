@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Search, UserX, UserCheck } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { Users, Search, UserX, UserCheck, Trash2 } from 'lucide-react';
+import { collection, getDocs, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../../context/ToastContext';
 
@@ -54,6 +54,17 @@ export default function AdminUsers() {
     }
   };
 
+  const handleDeleteUser = async (id, email) => {
+    if (!window.confirm(`Are you sure you want to permanently delete user account "${email || id}" from Firestore?`)) return;
+    try {
+      await deleteDoc(doc(db, 'users', id));
+      setUsers((prev) => prev.filter((u) => u.id !== id));
+      toast.success('User deleted from database successfully');
+    } catch (err) {
+      toast.error('Failed to delete user document');
+    }
+  };
+
   return (
     <div className="space-y-6 animate-fadeIn text-slate-100 font-sans">
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
@@ -63,7 +74,7 @@ export default function AdminUsers() {
             User Management ({users.length})
           </h2>
           <p className="text-xs text-slate-400 mt-1">
-            Manage registered SaaS user accounts, assign system roles, and suspend/activate users.
+            Manage registered SaaS user accounts, assign system roles, suspend/activate, or delete users.
           </p>
         </div>
       </div>
@@ -142,7 +153,7 @@ export default function AdminUsers() {
                       </span>
                     </td>
                     <td className="p-4 font-mono text-[11px] text-slate-400 truncate max-w-xs">{u.id}</td>
-                    <td className="p-4 text-right">
+                    <td className="p-4 text-right flex items-center justify-end gap-2">
                       <button
                         onClick={() => toggleStatus(u.id, u.status || 'active')}
                         className={`p-1.5 rounded-lg text-xs font-semibold ${
@@ -151,6 +162,14 @@ export default function AdminUsers() {
                         title={u.status === 'active' ? 'Suspend User' : 'Activate User'}
                       >
                         {u.status === 'active' ? <UserX className="w-4 h-4" /> : <UserCheck className="w-4 h-4" />}
+                      </button>
+
+                      <button
+                        onClick={() => handleDeleteUser(u.id, u.email)}
+                        className="p-1.5 rounded-lg text-xs font-semibold text-rose-400 hover:bg-rose-500/10 transition-colors"
+                        title="Delete User from Database"
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
                   </tr>

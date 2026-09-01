@@ -3,13 +3,14 @@ import {
   createUserWithEmailAndPassword,
   signInWithPopup,
   signOut,
+  deleteUser,
   sendPasswordResetEmail,
   sendEmailVerification,
   updateProfile,
 } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '../firebase/config';
+import { deleteUserProfile } from './userService';
 
-// Mock auth fallback if Firebase API keys are not yet configured in .env
 const MOCK_USER_STORAGE_KEY = 'taskflow_auth_user';
 
 export const loginWithEmail = async (email, password) => {
@@ -17,7 +18,6 @@ export const loginWithEmail = async (email, password) => {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
     return userCredential.user;
   }
-  // Mock login fallback
   const mockUser = {
     uid: 'user-hassan-demo',
     email: email || 'hassan@taskflow.dev',
@@ -38,7 +38,6 @@ export const registerWithEmail = async (email, password, displayName) => {
     }
     return userCredential.user;
   }
-  // Mock registration fallback
   const mockUser = {
     uid: `user-${Date.now()}`,
     email,
@@ -71,6 +70,20 @@ export const loginWithGoogle = async () => {
 export const logoutUser = async () => {
   if (isFirebaseConfigured) {
     await signOut(auth);
+  }
+  window.localStorage.removeItem(MOCK_USER_STORAGE_KEY);
+};
+
+export const deleteUserAccount = async (uid) => {
+  if (uid) {
+    await deleteUserProfile(uid);
+  }
+  if (auth.currentUser) {
+    try {
+      await deleteUser(auth.currentUser);
+    } catch (err) {
+      console.warn('Firebase Auth user delete error (requires recent login):', err?.message || err);
+    }
   }
   window.localStorage.removeItem(MOCK_USER_STORAGE_KEY);
 };

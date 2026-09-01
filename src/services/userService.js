@@ -1,5 +1,5 @@
 import { db } from '../firebase/config';
-import { doc, getDoc, setDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function getUserProfile(uid) {
   if (!uid) return null;
@@ -53,5 +53,15 @@ export async function updateUserProfile(uid, data) {
     });
   } catch (error) {
     console.warn('Could not update user profile in Firestore:', error?.message || error);
+  }
+}
+
+export async function deleteUserProfile(uid) {
+  if (!uid) return;
+  try {
+    const userDocRef = doc(db, 'users', uid);
+    await deleteDoc(userDocRef);
+  } catch (error) {
+    console.warn('Could not delete user profile from Firestore:', error?.message || error);
   }
 }
