@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Clock, RefreshCw, XCircle } from 'lucide-react';
-import { collection, getDocs, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { Mail, Clock, RefreshCw, XCircle, CheckCircle } from 'lucide-react';
+import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { db } from '../../firebase/config';
 import { useToast } from '../../context/ToastContext';
+import { useAuth } from '../../hooks/useAuth';
+import { useWorkspace } from '../../hooks/useWorkspace';
+import { acceptInvitation } from '../../services/invitationService';
 
 export default function InvitationsList() {
   const { toast } = useToast();
+  const { currentUser } = useAuth();
+  const { refreshWorkspaces, switchWorkspace } = useWorkspace();
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,6 +29,26 @@ export default function InvitationsList() {
     }
     load();
   }, []);
+
+  const handleAccept = async (inv) => {
+    try {
+      const ok = await acceptInvitation(inv.id, currentUser);
+      if (ok) {
+        toast.success(`Accepted invitation! Joined workspace.`);
+        setInvitations((prev) => prev.filter((i) => i.id !== inv.id));
+        if (refreshWorkspaces) {
+          await refreshWorkspaces();
+        }
+        if (inv.workspaceId) {
+          switchWorkspace(inv.workspaceId);
+        }
+      } else {
+        toast.error('Failed to accept invitation. Make sure logged in email matches invitation.');
+      }
+    } catch (err) {
+      toast.error('Error accepting invitation.');
+    }
+  };
 
   const handleResend = (id, email) => {
     toast.success(`Resent workspace invitation record for ${email}`);
@@ -70,12 +95,22 @@ export default function InvitationsList() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => handleAccept(inv)}
+                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold transition-colors shadow-xs"
+              >
+                <CheckCircle className="w-3.5 h-3.5" />
+                <span>Accept</span>
+              </button>
+
+              <button
+                type="button"
                 onClick={() => handleResend(inv.id, inv.email)}
                 className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold transition-colors"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 <span>Resend</span>
               </button>
+
               <button
                 type="button"
                 onClick={() => handleRevoke(inv.id, inv.email)}
