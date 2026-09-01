@@ -14,6 +14,17 @@ export function WorkspaceProvider({ children }) {
   const [currentWorkspace, setCurrentWorkspace] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const refreshWorkspaces = async () => {
+    if (!currentUser?.uid) return;
+    const fetched = await getWorkspacesForUser(currentUser.uid);
+    setWorkspaces(fetched);
+    if (fetched.length > 0) {
+      const savedId = localStorage.getItem('taskflow_active_workspace');
+      const active = fetched.find((w) => w.id === savedId) || fetched[0];
+      setCurrentWorkspace(active);
+    }
+  };
+
   useEffect(() => {
     async function loadWorkspaces() {
       if (!currentUser?.uid) {
@@ -70,7 +81,7 @@ export function WorkspaceProvider({ children }) {
   );
   const currentRole = userMemberInfo?.role || (userProfile?.role === 'admin' ? 'admin' : 'owner');
 
-  const currentPlanObj = PLANS.find((p) => p.id === (currentWorkspace?.plan || 'pro')) || PLANS[1];
+  const currentPlanObj = PLANS.find((p) => p.id === (currentWorkspace?.plan || 'free')) || PLANS[0];
 
   return (
     <WorkspaceContext.Provider
@@ -82,6 +93,7 @@ export function WorkspaceProvider({ children }) {
         currentPlanObj,
         switchWorkspace,
         createNewWorkspace,
+        refreshWorkspaces,
       }}
     >
       {children}

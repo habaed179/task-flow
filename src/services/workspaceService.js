@@ -14,10 +14,21 @@ import {
 export async function getWorkspacesForUser(userId) {
   if (!userId) return [];
   try {
-    const q = query(collection(db, 'workspaces'), where('ownerId', '==', userId));
-    const snap = await getDocs(q);
-    const list = snap.docs.map((d) => ({ id: d.id, plan: d.data().plan || 'free', ...d.data() }));
-    return list;
+    const q1 = query(collection(db, 'workspaces'), where('ownerId', '==', userId));
+    const snap1 = await getDocs(q1);
+    const owned = snap1.docs.map((d) => ({ id: d.id, plan: d.data().plan || 'free', ...d.data() }));
+
+    const snapAll = await getDocs(collection(db, 'workspaces'));
+    const joined = snapAll.docs
+      .filter((d) => {
+        const members = d.data().members || [];
+        return members.some((m) => m.id === userId);
+      })
+      .map((d) => ({ id: d.id, plan: d.data().plan || 'free', ...d.data() }));
+
+    const map = new Map();
+    [...owned, ...joined].forEach((w) => map.set(w.id, w));
+    return Array.from(map.values());
   } catch (error) {
     console.error('Error fetching workspaces from Firestore:', error);
     return [];
@@ -41,7 +52,6 @@ export async function createWorkspace(data, ownerId) {
   try {
     await setDoc(newRef, workspaceData);
     
-    // Also create workspaceMembers record
     const memberRef = doc(collection(db, 'workspaceMembers'));
     await setDoc(memberRef, {
       workspaceId: newRef.id,

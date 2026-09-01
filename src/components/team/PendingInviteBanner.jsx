@@ -7,7 +7,7 @@ import { useToast } from '../../context/ToastContext';
 
 export default function PendingInviteBanner() {
   const { currentUser } = useAuth();
-  const { switchWorkspace } = useWorkspace();
+  const { switchWorkspace, refreshWorkspaces } = useWorkspace();
   const { toast } = useToast();
   const [invites, setInvites] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -31,12 +31,17 @@ export default function PendingInviteBanner() {
       if (ok) {
         toast.success(`Accepted invitation to join workspace!`);
         setInvites((prev) => prev.filter((i) => i.id !== inv.id));
+        if (refreshWorkspaces) {
+          await refreshWorkspaces();
+        }
         if (inv.workspaceId) {
           switchWorkspace(inv.workspaceId);
         }
       } else {
-        toast.error('Failed to accept invitation.');
+        toast.error('Failed to accept invitation. Make sure your account email matches.');
       }
+    } catch (err) {
+      toast.error('Error accepting invitation.');
     } finally {
       setLoading(false);
     }
