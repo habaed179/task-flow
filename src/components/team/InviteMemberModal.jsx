@@ -2,32 +2,55 @@ import React, { useState } from 'react';
 import { X, UserPlus, Mail, AlertCircle } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useWorkspace } from '../../hooks/useWorkspace';
+import { useAuth } from '../../hooks/useAuth';
+import { sendInvitation } from '../../services/invitationService';
 
 export default function InviteMemberModal({ isOpen, onClose }) {
   const { toast } = useToast();
   const { currentWorkspace } = useWorkspace();
+  const { currentUser, userProfile } = useAuth();
 
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('member');
+  const [role, setRole] = useState('Member');
   const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) {
       setError('Email address is required.');
       return;
     }
 
-    toast.success(`Invitation sent to ${email.trim()} as ${role}!`);
-    setEmail('');
+    setSubmitting(true);
     setError('');
-    onClose();
+
+    try {
+      const inv = await sendInvitation({
+        workspaceId: currentWorkspace?.id || 'ws-main',
+        email: email.trim(),
+        role,
+        invitedBy: userProfile?.displayName || currentUser?.email || 'Workspace Admin',
+      });
+
+      if (inv) {
+        toast.success(`Invitation created in database for ${email.trim()}! In-app banner will display on member login.`);
+        setEmail('');
+        onClose();
+      } else {
+        setError('Failed to create invitation in Firestore.');
+      }
+    } catch (err) {
+      setError('Error sending invitation. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fadeIn font-sans">
       <div className="w-full max-w-md bg-white dark:bg-slate-900 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl overflow-hidden animate-scaleUp">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800">
           <div className="flex items-center gap-2">
@@ -78,9 +101,10 @@ export default function InviteMemberModal({ isOpen, onClose }) {
               onChange={(e) => setRole(e.target.value)}
               className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-brand-500"
             >
-              <option value="admin">Admin (Full workspace management)</option>
-              <option value="manager">Manager (Manage projects & assign tasks)</option>
-              <option value="member">Member (Work on assigned tasks)</option>
+              <option value="Admin">Admin (Full workspace management)</option>
+              <option value="Manager">Manager (Manage projects & assign tasks)</option>
+              <option value="Member">Member (Work on assigned tasks)</option>
+              <option value="Viewer">Viewer (Read only access)</option>
             </select>
           </div>
 
@@ -94,9 +118,10 @@ export default function InviteMemberModal({ isOpen, onClose }) {
             </button>
             <button
               type="submit"
+              disabled={submitting}
               className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm transition-all shadow-md shadow-brand-600/20"
             >
-              Send Invitation
+              {submitting ? 'Sending...' : 'Send Invitation'}
             </button>
           </div>
         </form>
