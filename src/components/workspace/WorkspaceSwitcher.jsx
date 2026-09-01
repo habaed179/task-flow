@@ -1,13 +1,25 @@
 import React, { useState } from 'react';
 import { useWorkspace } from '../../hooks/useWorkspace';
-import { ChevronDown, Plus, Building2, Check, Sparkles } from 'lucide-react';
+import { useAuth } from '../../hooks/useAuth';
+import { ChevronDown, Plus, Building2, Check, Crown, Shield } from 'lucide-react';
 
 export default function WorkspaceSwitcher({ onOpenNewWorkspaceModal }) {
   const { workspaces, currentWorkspace, switchWorkspace } = useWorkspace();
+  const { currentUser } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
 
+  const getWorkspaceUserRole = (ws) => {
+    if (ws.ownerId === currentUser?.uid) return 'Workspace Leader';
+    const member = ws.members?.find((m) => m.id === currentUser?.uid || m.email === currentUser?.email);
+    if (member?.role === 'Owner') return 'Workspace Leader';
+    if (member?.role === 'Admin') return 'Admin';
+    if (member?.role === 'Manager') return 'Manager';
+    if (member?.role === 'Viewer') return 'Viewer';
+    return 'Team Member';
+  };
+
   return (
-    <div className="relative">
+    <div className="relative font-sans">
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
@@ -22,7 +34,7 @@ export default function WorkspaceSwitcher({ onOpenNewWorkspaceModal }) {
               {currentWorkspace?.name || 'My Workspace'}
             </p>
             <p className="text-[10px] text-slate-400 truncate uppercase tracking-wider font-semibold">
-              {currentWorkspace?.plan || 'pro'} Plan
+              {currentWorkspace?.plan || 'free'} Plan • {getWorkspaceUserRole(currentWorkspace || {})}
             </p>
           </div>
         </div>
@@ -34,12 +46,13 @@ export default function WorkspaceSwitcher({ onOpenNewWorkspaceModal }) {
           <div className="fixed inset-0 z-40" onClick={() => setIsOpen(false)} />
           <div className="absolute top-full left-0 right-0 mt-2 z-50 p-2 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-2xl space-y-1 animate-scaleUp">
             <p className="px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-slate-400">
-              Workspaces ({workspaces.length})
+              Your Workspaces ({workspaces.length})
             </p>
 
-            <div className="max-h-48 overflow-y-auto space-y-1">
+            <div className="max-h-56 overflow-y-auto space-y-1">
               {workspaces.map((ws) => {
                 const isSelected = ws.id === currentWorkspace?.id;
+                const roleName = getWorkspaceUserRole(ws);
                 return (
                   <button
                     key={ws.id}
@@ -55,7 +68,10 @@ export default function WorkspaceSwitcher({ onOpenNewWorkspaceModal }) {
                   >
                     <div className="flex items-center gap-2 truncate">
                       <Building2 className="w-3.5 h-3.5 shrink-0" />
-                      <span className="truncate">{ws.name}</span>
+                      <div className="truncate text-left">
+                        <p className="truncate leading-none">{ws.name}</p>
+                        <p className="text-[9px] text-slate-400 font-medium mt-0.5">{roleName}</p>
+                      </div>
                     </div>
                     {isSelected && <Check className="w-3.5 h-3.5 stroke-[3] shrink-0" />}
                   </button>

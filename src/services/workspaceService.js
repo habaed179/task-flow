@@ -16,7 +16,7 @@ export async function getWorkspacesForUser(userId) {
   try {
     const q = query(collection(db, 'workspaces'), where('ownerId', '==', userId));
     const snap = await getDocs(q);
-    const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    const list = snap.docs.map((d) => ({ id: d.id, plan: d.data().plan || 'free', ...d.data() }));
     return list;
   } catch (error) {
     console.error('Error fetching workspaces from Firestore:', error);
@@ -30,16 +30,28 @@ export async function createWorkspace(data, ownerId) {
     name: data.name || 'New Workspace',
     description: data.description || '',
     ownerId,
-    plan: data.plan || 'Free',
+    plan: 'free',
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
     members: [
-      { id: ownerId, name: 'Workspace Owner', email: '', role: 'Owner' }
+      { id: ownerId, name: data.userName || 'Workspace Leader', email: data.userEmail || '', role: 'Owner' }
     ]
   };
 
   try {
     await setDoc(newRef, workspaceData);
+    
+    // Also create workspaceMembers record
+    const memberRef = doc(collection(db, 'workspaceMembers'));
+    await setDoc(memberRef, {
+      workspaceId: newRef.id,
+      userId: ownerId,
+      role: 'Owner',
+      status: 'active',
+      joinedAt: serverTimestamp(),
+      createdAt: serverTimestamp(),
+    });
+
     return { id: newRef.id, ...workspaceData };
   } catch (error) {
     console.error('Error creating workspace in Firestore:', error);
