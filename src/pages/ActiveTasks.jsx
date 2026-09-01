@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useOutletContext } from 'react-router-dom';
 import { useTasks } from '../hooks/useTasks';
 import TaskList from '../components/TaskList';
 import SearchBar from '../components/SearchBar';
@@ -6,7 +7,12 @@ import FilterBar from '../components/FilterBar';
 import SortDropdown from '../components/SortDropdown';
 import { filterAndSortTasks } from '../utils/taskHelpers';
 
-export default function ActiveTasks({ onOpenTaskModal, onEditTask, onDeleteTask }) {
+export default function ActiveTasks(props) {
+  const contextProps = useOutletContext() || {};
+  const onOpenTaskModal = props.onOpenTaskModal || contextProps.onOpenTaskModal;
+  const onEditTask = props.onEditTask || contextProps.onEditTask;
+  const onDeleteTask = props.onDeleteTask || contextProps.onDeleteTask;
+
   const { tasks, toggleTaskComplete, reorderTasks } = useTasks();
 
   const [searchQuery, setSearchQuery] = useState('');

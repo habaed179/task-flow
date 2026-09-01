@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useOutletContext } from 'react-router-dom';
 import { useTasks } from '../hooks/useTasks';
 import TaskList from '../components/TaskList';
 import SearchBar from '../components/SearchBar';
@@ -7,7 +7,12 @@ import FilterBar from '../components/FilterBar';
 import SortDropdown from '../components/SortDropdown';
 import { filterAndSortTasks } from '../utils/taskHelpers';
 
-export default function AllTasks({ onOpenTaskModal, onEditTask, onDeleteTask }) {
+export default function AllTasks(props) {
+  const contextProps = useOutletContext() || {};
+  const onOpenTaskModal = props.onOpenTaskModal || contextProps.onOpenTaskModal;
+  const onEditTask = props.onEditTask || contextProps.onEditTask;
+  const onDeleteTask = props.onDeleteTask || contextProps.onDeleteTask;
+
   const { tasks, toggleTaskComplete, reorderTasks } = useTasks();
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -52,7 +57,6 @@ export default function AllTasks({ onOpenTaskModal, onEditTask, onDeleteTask }) 
 
   return (
     <div className="space-y-6 animate-fadeIn">
-      {/* Header & Controls */}
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           <div className="flex items-center gap-3">
@@ -82,7 +86,6 @@ export default function AllTasks({ onOpenTaskModal, onEditTask, onDeleteTask }) 
         />
       </div>
 
-      {/* Task List */}
       <TaskList
         tasks={filteredTasks}
         onToggleComplete={toggleTaskComplete}

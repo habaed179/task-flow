@@ -1,0 +1,22 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    match /users/{userId}/{allPaths=**} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && request.auth.uid == userId;
+    }
+
+    match /tasks/{taskId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+
+    match /workspaces/{workspaceId}/{allPaths=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
