@@ -10,25 +10,34 @@ import { acceptInvitation } from '../../services/invitationService';
 export default function InvitationsList() {
   const { toast } = useToast();
   const { currentUser } = useAuth();
-  const { refreshWorkspaces, switchWorkspace } = useWorkspace();
+  const { currentWorkspace, refreshWorkspaces, switchWorkspace } = useWorkspace();
   const [invitations, setInvitations] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     async function load() {
+      if (!currentWorkspace?.id) {
+        setInvitations([]);
+        setLoading(false);
+        return;
+      }
       try {
-        const q = query(collection(db, 'invitations'), where('status', '==', 'pending'));
+        const q = query(
+          collection(db, 'invitations'),
+          where('workspaceId', '==', currentWorkspace.id),
+          where('status', '==', 'pending')
+        );
         const snap = await getDocs(q);
         const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
         setInvitations(list);
       } catch (err) {
-        console.error('Error fetching pending invitations from Firestore:', err);
+        console.error('Error fetching workspace pending invitations from Firestore:', err);
       } finally {
         setLoading(false);
       }
     }
     load();
-  }, []);
+  }, [currentWorkspace?.id]);
 
   const handleAccept = async (inv) => {
     try {
@@ -51,7 +60,13 @@ export default function InvitationsList() {
   };
 
   const handleResend = (id, email) => {
-    toast.success(`Resent workspace invitation record for ${email}`);
+    const cleanEmail = (email || '').toLowerCase().trim();
+    const subject = encodeURIComponent(`Invitation to join ${currentWorkspace?.name || 'TaskFlow Workspace'}`);
+    const body = encodeURIComponent(
+      `Hi,\n\nReminder: You have been invited to join "${currentWorkspace?.name || 'TaskFlow Workspace'}" on TaskFlow SaaS.\n\nPlease log in at https://task-flow-two-fawn.vercel.app to accept.\n\nBest regards,\n${currentUser?.email}`
+    );
+    window.open(`mailto:${cleanEmail}?subject=${subject}&body=${body}`, '_blank');
+    toast.success(`Opened email client to resend invitation to ${cleanEmail}`);
   };
 
   const handleRevoke = async (id, email) => {
@@ -71,9 +86,9 @@ export default function InvitationsList() {
       <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
         <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
           <Mail className="w-5 h-5 text-amber-500" />
-          Pending Workspace Invitations ({invitations.length})
+          Pending Invitations Sent From Workspace ({invitations.length})
         </h3>
-        <span className="text-xs font-semibold text-slate-400">Awaiting user acceptance</span>
+        <span className="text-xs font-semibold text-slate-400">Workspace: {currentWorkspace?.name}</span>
       </div>
 
       <div className="space-y-3">
@@ -112,7 +127,7 @@ export default function InvitationsList() {
                   className="inline-flex items-center gap-1 px-3 py-1.5 rounded-xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 font-semibold transition-colors"
                 >
                   <RefreshCw className="w-3.5 h-3.5" />
-                  <span>Resend</span>
+                  <span>Resend Email</span>
                 </button>
 
                 <button

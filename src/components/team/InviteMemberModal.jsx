@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, UserPlus, Mail, AlertCircle } from 'lucide-react';
+import { X, UserPlus, Mail, AlertCircle, Send } from 'lucide-react';
 import { useToast } from '../../context/ToastContext';
 import { useWorkspace } from '../../hooks/useWorkspace';
 import { useAuth } from '../../hooks/useAuth';
@@ -19,7 +19,8 @@ export default function InviteMemberModal({ isOpen, onClose }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!email.trim()) {
+    const cleanEmail = email.toLowerCase().trim();
+    if (!cleanEmail) {
       setError('Email address is required.');
       return;
     }
@@ -30,13 +31,21 @@ export default function InviteMemberModal({ isOpen, onClose }) {
     try {
       const inv = await sendInvitation({
         workspaceId: currentWorkspace?.id || 'ws-main',
-        email: email.trim(),
+        email: cleanEmail,
         role,
         invitedBy: userProfile?.displayName || currentUser?.email || 'Workspace Admin',
       });
 
       if (inv) {
-        toast.success(`Invitation created in database for ${email.trim()}! In-app banner will display on member login.`);
+        toast.success(`Invitation created for ${cleanEmail}! In-app banner active.`);
+
+        // Dispatch mailto link so sender can also send direct Gmail
+        const subject = encodeURIComponent(`Invitation to join ${currentWorkspace?.name || 'TaskFlow Workspace'}`);
+        const body = encodeURIComponent(
+          `Hi,\n\nYou have been invited to join "${currentWorkspace?.name || 'TaskFlow Workspace'}" on TaskFlow SaaS as a ${role}.\n\nPlease log in to your account at https://task-flow-two-fawn.vercel.app to accept the invitation.\n\nBest regards,\n${userProfile?.displayName || currentUser?.email || 'TaskFlow Team'}`
+        );
+        window.open(`mailto:${cleanEmail}?subject=${subject}&body=${body}`, '_blank');
+
         setEmail('');
         onClose();
       } else {
@@ -119,9 +128,10 @@ export default function InviteMemberModal({ isOpen, onClose }) {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm transition-all shadow-md shadow-brand-600/20"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-brand-600 hover:bg-brand-700 text-white font-medium text-sm transition-all shadow-md shadow-brand-600/20"
             >
-              {submitting ? 'Sending...' : 'Send Invitation'}
+              <Send className="w-4 h-4" />
+              <span>{submitting ? 'Sending...' : 'Send Invitation'}</span>
             </button>
           </div>
         </form>

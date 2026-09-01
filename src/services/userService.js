@@ -60,11 +60,26 @@ export async function updateUserProfile(uid, data) {
 export async function deleteUserProfile(uid) {
   if (!uid) return;
   try {
-    // 1. Delete user profile doc
+    // 1. Get user email before deleting profile
     const userDocRef = doc(db, 'users', uid);
+    const snap = await getDoc(userDocRef);
+    const userEmail = snap.exists() ? snap.data().email?.toLowerCase()?.trim() : null;
+
+    // Delete user profile doc
     await deleteDoc(userDocRef);
 
-    // 2. Find and delete owned workspaces
+    // 2. Find and delete all pending/existing invitations sent to this user email
+    if (userEmail) {
+      try {
+        const invQuery = query(collection(db, 'invitations'), where('email', '==', userEmail));
+        const invSnap = await getDocs(invQuery);
+        for (const iDoc of invSnap.docs) {
+          await deleteDoc(doc(db, 'invitations', iDoc.id));
+        }
+      } catch (e) {}
+    }
+
+    // 3. Find and delete owned workspaces & associated tasks, projects, invitations
     const wsQuery = query(collection(db, 'workspaces'), where('ownerId', '==', uid));
     const wsSnap = await getDocs(wsQuery);
     for (const wsDoc of wsSnap.docs) {
@@ -87,10 +102,19 @@ export async function deleteUserProfile(uid) {
         }
       } catch (e) {}
 
+      // Delete invitations created in workspace
+      try {
+        const wsInvQuery = query(collection(db, 'invitations'), where('workspaceId', '==', wsId));
+        const wsInvSnap = await getDocs(wsInvQuery);
+        for (const iDoc of wsInvSnap.docs) {
+          await deleteDoc(doc(db, 'invitations', iDoc.id));
+        }
+      } catch (e) {}
+
       // Delete workspace document itself
       await deleteDoc(doc(db, 'workspaces', wsId));
     }
   } catch (error) {
-    console.warn('Could not clean user profile and workspaces from Firestore:', error?.message || error);
+    console.warn('Could not clean user profile, invitations and workspaces from Firestore:', error?.message || error);
   }
 }
