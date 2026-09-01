@@ -9,15 +9,15 @@ import {
   query,
   where,
   serverTimestamp,
-  runTransaction,
 } from 'firebase/firestore';
 
 export async function sendInvitation({ workspaceId, email, role = 'Member', invitedBy = 'Admin' }) {
   if (!workspaceId || !email) return null;
+  const cleanEmail = email.toLowerCase().trim();
   const newRef = doc(collection(db, 'invitations'));
   const invData = {
     workspaceId,
-    email: email.toLowerCase().trim(),
+    email: cleanEmail,
     role,
     invitedBy,
     status: 'pending',
@@ -37,13 +37,15 @@ export async function sendInvitation({ workspaceId, email, role = 'Member', invi
 export async function getPendingInvitationsForUser(email) {
   if (!email) return [];
   try {
+    const cleanEmail = email.toLowerCase().trim();
     const q = query(
       collection(db, 'invitations'),
-      where('email', '==', email.toLowerCase().trim()),
       where('status', '==', 'pending')
     );
     const snap = await getDocs(q);
-    return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    return snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((inv) => inv.email && inv.email.toLowerCase().trim() === cleanEmail);
   } catch (error) {
     console.error('Error fetching user invitations from Firestore:', error);
     return [];
@@ -76,9 +78,11 @@ export async function acceptInvitation(invitationId, user) {
     const inv = invSnap.data();
     if (inv.status !== 'pending') return false;
 
-    // Check if email matches
-    if (inv.email.toLowerCase() !== user.email?.toLowerCase()) {
-      throw new Error('Invitation email does not match logged in account email.');
+    const invEmail = (inv.email || '').toLowerCase().trim();
+    const userEmail = (user.email || '').toLowerCase().trim();
+
+    if (invEmail && userEmail && invEmail !== userEmail) {
+      throw new Error(`Invitation is for ${invEmail}, but logged in as ${userEmail}.`);
     }
 
     // Atomically update invitation and add workspace member
@@ -93,7 +97,7 @@ export async function acceptInvitation(invitationId, user) {
     const wsSnap = await getDoc(wsRef);
     if (wsSnap.exists()) {
       const existingMembers = wsSnap.data().members || [];
-      const isAlreadyMember = existingMembers.some((m) => m.id === user.uid || m.email === user.email);
+      const isAlreadyMember = existingMembers.some((m) => m.id === user.uid || (m.email && m.email.toLowerCase().trim() === userEmail));
       if (!isAlreadyMember) {
         const newMember = {
           id: user.uid,
