@@ -11,9 +11,13 @@ export function NotificationProvider({ children }) {
 
   useEffect(() => {
     async function loadNotifications() {
+      if (!currentUser?.uid) {
+        setNotifications([]);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      const userId = currentUser?.uid || 'user-hassan-demo';
-      const data = await getNotificationsForUser(userId);
+      const data = await getNotificationsForUser(currentUser.uid);
       setNotifications(data);
       setLoading(false);
     }

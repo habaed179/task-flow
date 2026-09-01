@@ -16,15 +16,21 @@ export function WorkspaceProvider({ children }) {
 
   useEffect(() => {
     async function loadWorkspaces() {
+      if (!currentUser?.uid) {
+        setWorkspaces([]);
+        setCurrentWorkspace(null);
+        setLoading(false);
+        return;
+      }
       setLoading(true);
-      const userId = currentUser?.uid || 'user-hassan-demo';
-      const fetched = await getWorkspacesForUser(userId);
+      const fetched = await getWorkspacesForUser(currentUser.uid);
       setWorkspaces(fetched);
       if (fetched.length > 0) {
-        // Keep active selection or default to first
         const savedId = localStorage.getItem('taskflow_active_workspace');
         const active = fetched.find((w) => w.id === savedId) || fetched[0];
         setCurrentWorkspace(active);
+      } else {
+        setCurrentWorkspace(null);
       }
       setLoading(false);
     }
@@ -41,7 +47,7 @@ export function WorkspaceProvider({ children }) {
   };
 
   const createNewWorkspace = async (name, description) => {
-    const userId = currentUser?.uid || 'user-hassan-demo';
+    if (!currentUser?.uid) return null;
     const newWs = await createWorkspaceService(
       {
         name,
@@ -49,7 +55,7 @@ export function WorkspaceProvider({ children }) {
         userName: userProfile?.displayName || currentUser?.email || 'Owner',
         userEmail: currentUser?.email || '',
       },
-      userId
+      currentUser.uid
     );
 
     setWorkspaces((prev) => [newWs, ...prev]);
@@ -59,13 +65,11 @@ export function WorkspaceProvider({ children }) {
     return newWs;
   };
 
-  // Derive current user role in selected workspace
   const userMemberInfo = currentWorkspace?.members?.find(
-    (m) => m.id === (currentUser?.uid || 'user-hassan-demo')
+    (m) => m.id === currentUser?.uid
   );
   const currentRole = userMemberInfo?.role || (userProfile?.role === 'admin' ? 'admin' : 'owner');
 
-  // Plan limits check
   const currentPlanObj = PLANS.find((p) => p.id === (currentWorkspace?.plan || 'pro')) || PLANS[1];
 
   return (
