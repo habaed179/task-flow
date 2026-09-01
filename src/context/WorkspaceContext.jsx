@@ -35,13 +35,31 @@ export function WorkspaceProvider({ children }) {
       }
       setLoading(true);
       const fetched = await getWorkspacesForUser(currentUser.uid);
-      setWorkspaces(fetched);
       if (fetched.length > 0) {
+        setWorkspaces(fetched);
         const savedId = localStorage.getItem('taskflow_active_workspace');
         const active = fetched.find((w) => w.id === savedId) || fetched[0];
         setCurrentWorkspace(active);
       } else {
-        setCurrentWorkspace(null);
+        // Automatically create clean workspace for new users
+        try {
+          const autoWs = await createWorkspaceService(
+            {
+              name: 'My Workspace',
+              description: 'Personal Workspace',
+              userName: userProfile?.displayName || currentUser?.email || 'Owner',
+              userEmail: currentUser?.email || '',
+            },
+            currentUser.uid
+          );
+          setWorkspaces([autoWs]);
+          setCurrentWorkspace(autoWs);
+          localStorage.setItem('taskflow_active_workspace', autoWs.id);
+        } catch (e) {
+          console.error('Error auto-creating workspace:', e);
+          setWorkspaces([]);
+          setCurrentWorkspace(null);
+        }
       }
       setLoading(false);
     }

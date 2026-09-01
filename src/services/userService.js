@@ -1,5 +1,5 @@
 import { db } from '../firebase/config';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, serverTimestamp } from 'firebase/firestore';
 
 export async function getUserProfile(uid) {
   if (!uid) return null;
@@ -25,7 +25,7 @@ export async function createUserProfile(userOrUid, data = {}) {
   const profile = {
     uid,
     displayName,
-    email: email || '',
+    email: (email || '').toLowerCase().trim(),
     photoURL: (typeof userOrUid === 'object' ? userOrUid.photoURL : null) || data.photoURL || '',
     platformRole: data.platformRole || 'platformUser',
     role: data.role || 'member',
@@ -60,9 +60,37 @@ export async function updateUserProfile(uid, data) {
 export async function deleteUserProfile(uid) {
   if (!uid) return;
   try {
+    // 1. Delete user profile doc
     const userDocRef = doc(db, 'users', uid);
     await deleteDoc(userDocRef);
+
+    // 2. Find and delete owned workspaces
+    const wsQuery = query(collection(db, 'workspaces'), where('ownerId', '==', uid));
+    const wsSnap = await getDocs(wsQuery);
+    for (const wsDoc of wsSnap.docs) {
+      const wsId = wsDoc.id;
+      // Delete tasks in workspace
+      try {
+        const tasksQuery = query(collection(db, 'tasks'), where('workspaceId', '==', wsId));
+        const tasksSnap = await getDocs(tasksQuery);
+        for (const tDoc of tasksSnap.docs) {
+          await deleteDoc(doc(db, 'tasks', tDoc.id));
+        }
+      } catch (e) {}
+
+      // Delete projects in workspace
+      try {
+        const projQuery = query(collection(db, 'projects'), where('workspaceId', '==', wsId));
+        const projSnap = await getDocs(projQuery);
+        for (const pDoc of projSnap.docs) {
+          await deleteDoc(doc(db, 'projects', pDoc.id));
+        }
+      } catch (e) {}
+
+      // Delete workspace document itself
+      await deleteDoc(doc(db, 'workspaces', wsId));
+    }
   } catch (error) {
-    console.warn('Could not delete user profile from Firestore:', error?.message || error);
+    console.warn('Could not clean user profile and workspaces from Firestore:', error?.message || error);
   }
 }
