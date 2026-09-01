@@ -9,14 +9,20 @@ import {
   updateProfile,
 } from 'firebase/auth';
 import { auth, googleProvider, isFirebaseConfigured } from '../firebase/config';
-import { deleteUserProfile } from './userService';
+import { deleteUserProfile, getUserProfile } from './userService';
 
 const MOCK_USER_STORAGE_KEY = 'taskflow_auth_user';
 
 export const loginWithEmail = async (email, password) => {
   if (isFirebaseConfigured) {
     const userCredential = await signInWithEmailAndPassword(auth, email, password);
-    return userCredential.user;
+    const user = userCredential.user;
+    const profile = await getUserProfile(user.uid);
+    if (profile?.deleted || profile?.status === 'deleted') {
+      await signOut(auth);
+      throw new Error('This account has been deleted and can no longer log in.');
+    }
+    return user;
   }
   const mockUser = {
     uid: 'user-hassan-demo',
@@ -53,7 +59,13 @@ export const registerWithEmail = async (email, password, displayName) => {
 export const loginWithGoogle = async () => {
   if (isFirebaseConfigured) {
     const userCredential = await signInWithPopup(auth, googleProvider);
-    return userCredential.user;
+    const user = userCredential.user;
+    const profile = await getUserProfile(user.uid);
+    if (profile?.deleted || profile?.status === 'deleted') {
+      await signOut(auth);
+      throw new Error('This account has been deleted and can no longer log in.');
+    }
+    return user;
   }
   const mockUser = {
     uid: 'google-user-123',
@@ -82,7 +94,10 @@ export const deleteUserAccount = async (uid) => {
     try {
       await deleteUser(auth.currentUser);
     } catch (err) {
-      console.warn('Firebase Auth user delete error (requires recent login):', err?.message || err);
+      console.warn('Firebase Auth delete user notice:', err?.message || err);
+      try {
+        await signOut(auth);
+      } catch (e) {}
     }
   }
   window.localStorage.removeItem(MOCK_USER_STORAGE_KEY);

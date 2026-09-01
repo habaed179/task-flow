@@ -17,9 +17,19 @@ export function AuthProvider({ children }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
-        const profile = await createOrUpdateUserDoc(user);
+        const profile = await getUserProfile(user.uid);
+        if (profile?.deleted || profile?.status === 'deleted') {
+          await logoutUser();
+          setCurrentUser(null);
+          setUserProfile(null);
+          localStorage.removeItem('taskflow_auth_user');
+          setLoading(false);
+          return;
+        }
+
+        const updatedProfile = await createOrUpdateUserDoc(user);
         setCurrentUser(user);
-        setUserProfile(profile || {
+        setUserProfile(updatedProfile || {
           uid: user.uid,
           displayName: user.displayName || user.email?.split('@')[0] || 'User',
           email: user.email || '',
@@ -44,6 +54,10 @@ export function AuthProvider({ children }) {
     try {
       const user = await loginWithEmail(email, password);
       const profile = await getUserProfile(user.uid);
+      if (profile?.deleted || profile?.status === 'deleted') {
+        await logoutUser();
+        throw new Error('This account has been deleted and can no longer log in.');
+      }
       setCurrentUser(user);
       setUserProfile(profile || {
         uid: user.uid,
@@ -79,9 +93,14 @@ export function AuthProvider({ children }) {
     setLoading(true);
     try {
       const user = await loginWithGoogle();
-      const profile = await createOrUpdateUserDoc(user);
+      const profile = await getUserProfile(user.uid);
+      if (profile?.deleted || profile?.status === 'deleted') {
+        await logoutUser();
+        throw new Error('This account has been deleted and can no longer log in.');
+      }
+      const updatedProfile = await createOrUpdateUserDoc(user);
       setCurrentUser(user);
-      setUserProfile(profile || {
+      setUserProfile(updatedProfile || {
         uid: user.uid,
         displayName: user.displayName || user.email?.split('@')[0],
         email: user.email,
